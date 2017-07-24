@@ -1,0 +1,5 @@
+*.pyc
+.gdb_history
+peda*.txt
+core
+
